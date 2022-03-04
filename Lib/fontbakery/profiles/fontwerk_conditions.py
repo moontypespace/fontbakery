@@ -17,7 +17,7 @@ general = {
         9: r'.*',  # name ID 9: Designer; name of the designer of the typeface.
         10: r"Original Fontwerk font\.[\r\n]+Revision Information:[\r\n]+1.00 Release.*",  # eg. 1.01 Bug fix spacing, update fontinfo, improve kerning   # name ID 10: Description + Versionierung + Marketing-Text, sobald vorhanden, spätestens ab V 1.01
         11: "https://fontwerk.com",  # name ID 11: URL Vendor
-        12: r"https:\/\/fontwerk\.com\/designers\/.*-.*",  # name ID 12: URL Designer
+        12: r"https:\/\/fontwerk\.com\/designers\/.*",  # name ID 12: URL Designer
         13: r"This Font Software is the property of Fontwerk GmbH and its use by you is covered under the terms of an End-User License Agreement \(EULA\)\. Unless you have entered into a specific license agreement granting you additional rights, your use of this Font Software is limited by the terms of the actual license agreement you have entered into with Fontwerk\. If you have any questions concerning your rights you should review the EULA you received with the software or contact Fontwerk\. A copy of the EULA for this Font Software can be found on https:\/\/fontwerk\.com\/licensing\.",  # name ID 13: License Description
         14: "https://fontwerk.com/licensing",  # name ID 14: URL License
     },
