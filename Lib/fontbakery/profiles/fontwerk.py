@@ -76,8 +76,8 @@ def get_degree_of_line(point_a, point_b):
 
 def normalize_degree(deg):
     if deg < 0:
-        return deg + 180
-    return deg - 180
+        return deg + 360
+    return deg
 
 @check(
     id = 'com.fontwerk/check/no_mac_entries',
@@ -290,7 +290,6 @@ def com_fontwerk_check_interpolation_issues(ttFont):
 
                 deg = get_degree_of_line(before_end_point, end_point)
                 pre_deg = get_degree_of_line(pre_before_end_point, pre_end_point)
-
                 if not close_enough(normalize_degree(deg), normalize_degree(pre_deg), tolerance=45):
                     errs = add_dict_set(errs, "Differences in end point direction (more than 45 degree)", g_name)
                     break
