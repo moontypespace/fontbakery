@@ -74,4 +74,4 @@ def test_check_interpolation_issues():
     ttFont = TTFont(TEST_FILE("bad_fonts/interpolation_issue_uniFB25/NotoSansHebrew-VF.ttf"))
     assert_results_contain(check(ttFont),
                            FAIL, 'interpolation-issues',
-                           'Differences in end point direction (more than 45 degree)')
+                           'Differences in end point direction (more than 45 degree): uniFB25')

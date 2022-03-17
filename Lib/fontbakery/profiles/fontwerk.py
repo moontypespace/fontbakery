@@ -56,24 +56,28 @@ FONTWERK_PROFILE_CHECKS = \
 
 
 def add_dict_set(d, item_dict, item_set):
-  if item_dict not in d:
-    d[item_dict] = set()
-  d[item_dict].add(item_set)
+    if item_dict not in d:
+        d[item_dict] = set()
+    d[item_dict].add(item_set)
 
-  return d
+    return d
 
 def close_enough(value_a, value_b, tolerance=0.0):
-  """
-  General function for checking if a value
-  is close enough to a different value.
-  """
-  return math.isclose(value_a, value_b, abs_tol=tolerance)
+    """
+    General function for checking if a value
+    is close enough to a different value.
+    """
+    return math.isclose(value_a, value_b, abs_tol=tolerance)
 
 def get_degree_of_line(point_a, point_b):
-  x = point_b[0] - point_a[0]
-  y = point_b[1] - point_a[1]
-  return degrees(atan2(y, x))
+    x = point_b[0] - point_a[0]
+    y = point_b[1] - point_a[1]
+    return degrees(atan2(y, x))
 
+def normalize_degree(deg):
+    if deg < 0:
+        return deg + 180
+    return deg - 180
 
 @check(
     id = 'com.fontwerk/check/no_mac_entries',
@@ -244,7 +248,7 @@ def com_fontwerk_check_interpolation_issues(ttFont):
         for instance_name, font_instance in font_instances.items():
             glyphs.append(font_instance['glyf'].get(g_name, None))
 
-        points_set = set([len(g.coordinates) for g in glyphs if getattr(g, 'coordinates', None)])
+        points_set = {len(g.coordinates) for g in glyphs if getattr(g, 'coordinates', None)}
         if not points_set:
             # skip because,
             # glyph seems to have no outlines at all.
@@ -254,17 +258,17 @@ def com_fontwerk_check_interpolation_issues(ttFont):
             errs = add_dict_set(errs, "Differences in 'coordinates' (number of points)", g_name)
             continue
 
-        contours_set = set([g.numberOfContours for g in glyphs if getattr(g, 'numberOfContours', None)])
+        contours_set = {g.numberOfContours for g in glyphs if getattr(g, 'numberOfContours', None)}
         if len(contours_set) > 1:
             errs = add_dict_set(errs, "Differences in 'numberOfContours'", g_name)
             continue
 
-        composite_set = set([g.isComposite() for g in glyphs])
+        composite_set = {g.isComposite() for g in glyphs}
         if len(composite_set) > 1:
             errs = add_dict_set(errs, "Differences in 'isComposite'", g_name)
             continue
 
-        components_set = set([g.components for g in glyphs if getattr(g, 'components', None)])
+        components_set = {g.components for g in glyphs if getattr(g, 'components', None)}
         if len(components_set) > 1:
             errs = add_dict_set(errs, "Differences in 'components'", g_name)
             continue
@@ -287,13 +291,13 @@ def com_fontwerk_check_interpolation_issues(ttFont):
                 deg = get_degree_of_line(before_end_point, end_point)
                 pre_deg = get_degree_of_line(pre_before_end_point, pre_end_point)
 
-                if not close_enough(deg, pre_deg, tolerance=45):
+                if not close_enough(normalize_degree(deg), normalize_degree(pre_deg), tolerance=45):
                     errs = add_dict_set(errs, "Differences in end point direction (more than 45 degree)", g_name)
                     break
 
     if errs:
         for title in errs:
-            yield FAIL, Message("interpolation-issue", f"{title}: {', '.join(list(errs[title]))}")
+            yield FAIL, Message("interpolation-issues", f"{title}: {', '.join(list(errs[title]))}")
     else:
         yield PASS, "No interpolation issues found."
 
