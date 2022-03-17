@@ -290,6 +290,10 @@ def com_fontwerk_check_interpolation_issues(ttFont):
 
                 deg = get_degree_of_line(before_end_point, end_point)
                 pre_deg = get_degree_of_line(pre_before_end_point, pre_end_point)
+                if close_enough(deg, pre_deg, tolerance=45):
+                    # catch situations like -2.0 vs 0.0
+                    continue
+
                 if not close_enough(normalize_degree(deg), normalize_degree(pre_deg), tolerance=45):
                     errs = add_dict_set(errs, "Differences in end point direction (more than 45 degree)", g_name)
                     break

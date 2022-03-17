@@ -76,6 +76,6 @@ def test_check_interpolation_issues():
                            FAIL, 'interpolation-issues',
                            'Differences in end point direction (more than 45 degree): uniFB25')
 
-    ttFont = TTFont(TEST_FILE("varfont/OpenSans[wdth,wght].ttf"))
-    assert_PASS(check(ttFont),
-                "No interpolation issues found.")
+    assert_results_contain(check(ttFont),
+                           FAIL, 'interpolation-issues',
+                           'Differences in end point direction (more than 45 degree): Aringacute.rvrn, multiply, uni0480')
