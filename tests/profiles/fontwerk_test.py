@@ -66,3 +66,12 @@ def test_check_inconsistencies_between_fvar_stat():
     assert_results_contain(check(ttFont),
                            FAIL, 'missing-fvar-instance-axis-value',
                            'missing in STAT table')
+
+def test_check_interpolation_issues():
+    check = CheckTester(fontwerk_profile,
+                        'com.fontwerk/check/interpolation_issues')
+
+    ttFont = TTFont(TEST_FILE("bad_fonts/interpolation_issue_uniFB25/NotoSansHebrew-VF.ttf"))
+    assert_results_contain(check(ttFont),
+                           FAIL, 'interpolation-issues',
+                           'Differences in end point direction (more than 45 degree)')
