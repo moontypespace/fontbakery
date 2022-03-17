@@ -1,6 +1,8 @@
 """
 Checks for Fontwerk <https://fontwerk.com/>
 """
+from math import atan2, degrees
+import math
 
 from fontbakery.callable import check
 from fontbakery.section import Section
@@ -8,6 +10,7 @@ from fontbakery.status import PASS, FAIL
 from fontbakery.fonts_profile import profile_factory
 from fontbakery.message import Message
 from fontbakery.profiles.googlefonts import GOOGLEFONTS_PROFILE_CHECKS
+from fontTools.varLib import instancer
 
 profile_imports = ('fontbakery.profiles.googlefonts',)
 profile = profile_factory(default_section=Section("Fontwerk"))
@@ -48,8 +51,33 @@ FONTWERK_PROFILE_CHECKS = \
         'com.fontwerk/check/vendor_id',
         'com.fontwerk/check/weight_class_fvar',
         'com.fontwerk/check/inconsistencies_between_fvar_stat',
+        'com.fontwerk/check/interpolation_issues',
     ]
 
+
+def add_dict_set(d, item_dict, item_set):
+    if item_dict not in d:
+        d[item_dict] = set()
+    d[item_dict].add(item_set)
+
+    return d
+
+def close_enough(value_a, value_b, tolerance=0.0):
+    """
+    General function for checking if a value
+    is close enough to a different value.
+    """
+    return math.isclose(value_a, value_b, abs_tol=tolerance)
+
+def get_degree_of_line(point_a, point_b):
+    x = point_b[0] - point_a[0]
+    y = point_b[1] - point_a[1]
+    return degrees(atan2(y, x))
+
+def normalize_degree(deg):
+    if deg < 0:
+        return deg + 180
+    return deg - 180
 
 @check(
     id = 'com.fontwerk/check/no_mac_entries',
@@ -192,6 +220,86 @@ def com_fontwerk_check_inconsistencies_between_fvar_stat(ttFont):
                               f"missing in STAT table.")
 
         # TODO: Compare fvar instance name with constructed STAT table name.
+
+
+@check(
+    id = 'com.fontwerk/check/interpolation_issues',
+    rationale = """
+        Check for interpolation issues within a variable font,
+        by checking the direction of the starting point.
+    """,
+    conditions = ["is_variable_font"],
+    proposal = 'https://github.com/googlefonts/noto-fonts/issues/2261'
+)
+def com_fontwerk_check_interpolation_issues(ttFont):
+    """Look for possible interpolation issues."""
+
+    fvar = ttFont['fvar']
+
+    font_instances = dict()
+    for instance in fvar.instances:
+        instance_font = instancer.instantiateVariableFont(ttFont, instance.coordinates)
+        subfamilyname = ttFont['name'].getDebugName(instance.subfamilyNameID)
+        font_instances[subfamilyname] = instance_font
+
+    errs = dict()
+    for g_name in ttFont.getGlyphOrder():
+        glyphs = []
+        for instance_name, font_instance in font_instances.items():
+            glyphs.append(font_instance['glyf'].get(g_name, None))
+
+        points_set = {len(g.coordinates) for g in glyphs if getattr(g, 'coordinates', None)}
+        if not points_set:
+            # skip because,
+            # glyph seems to have no outlines at all.
+            continue
+
+        if len(points_set) > 1:
+            errs = add_dict_set(errs, "Differences in 'coordinates' (number of points)", g_name)
+            continue
+
+        contours_set = {g.numberOfContours for g in glyphs if getattr(g, 'numberOfContours', None)}
+        if len(contours_set) > 1:
+            errs = add_dict_set(errs, "Differences in 'numberOfContours'", g_name)
+            continue
+
+        composite_set = {g.isComposite() for g in glyphs}
+        if len(composite_set) > 1:
+            errs = add_dict_set(errs, "Differences in 'isComposite'", g_name)
+            continue
+
+        components_set = {g.components for g in glyphs if getattr(g, 'components', None)}
+        if len(components_set) > 1:
+            errs = add_dict_set(errs, "Differences in 'components'", g_name)
+            continue
+
+        for i, g in enumerate(glyphs):
+            if i == 0:
+                # skip the first layer,
+                # because compare with previous glyph
+                # would not be possible
+                continue
+
+            previous_g = glyphs[i - 1]
+            for n in g.endPtsOfContours:
+                end_point = g.coordinates[n]
+                before_end_point = g.coordinates[n-1]
+
+                pre_end_point = previous_g.coordinates[n]
+                pre_before_end_point = previous_g.coordinates[n-1]
+
+                deg = get_degree_of_line(before_end_point, end_point)
+                pre_deg = get_degree_of_line(pre_before_end_point, pre_end_point)
+
+                if not close_enough(normalize_degree(deg), normalize_degree(pre_deg), tolerance=45):
+                    errs = add_dict_set(errs, "Differences in end point direction (more than 45 degree)", g_name)
+                    break
+
+    if errs:
+        for title in errs:
+            yield FAIL, Message("interpolation-issues", f"{title}: {', '.join(list(errs[title]))}")
+    else:
+        yield PASS, "No interpolation issues found."
 
 
 profile.auto_register(globals(),
